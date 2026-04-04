@@ -120,6 +120,51 @@ export async function handleEmailsApi(request, db, url, path, options) {
     }
   }
 
+  // 批量删除邮件
+  if (path === '/api/emails/batch-delete' && request.method === 'POST') {
+    if (isMock) return errorResponse('演示模式不可批量删除', 403);
+    try {
+      const body = await request.json();
+      const ids = Array.isArray(body?.ids) ? body.ids.map(id => parseInt(id, 10)).filter(id => Number.isInteger(id) && id > 0) : [];
+      if (!ids.length) return errorResponse('缺少 ids 参数', 400);
+      if (ids.length > 200) return errorResponse('单次最多删除200封邮件', 400);
+
+      const placeholders = ids.map(() => '?').join(',');
+      let rows = [];
+      if (isMailboxOnly) {
+        const payload = getJwtPayload(request, options);
+        const mailboxId = Number(payload?.mailboxId || 0);
+        if (!mailboxId) return errorResponse('未找到邮箱信息', 401);
+        const q = await db.prepare(`SELECT id, r2_object_key FROM messages WHERE id IN (${placeholders}) AND mailbox_id = ?`)
+          .bind(...ids, mailboxId).all();
+        rows = q?.results || [];
+      } else {
+        const q = await db.prepare(`SELECT id, r2_object_key FROM messages WHERE id IN (${placeholders})`)
+          .bind(...ids).all();
+        rows = q?.results || [];
+      }
+
+      if (!rows.length) return Response.json({ success: true, deletedCount: 0, requested: ids.length });
+
+      const actualIds = rows.map(r => r.id);
+      const deletePlaceholders = actualIds.map(() => '?').join(',');
+      const result = await db.prepare(`DELETE FROM messages WHERE id IN (${deletePlaceholders})`).bind(...actualIds).run();
+      const deletedCount = result?.meta?.changes || 0;
+
+      if (r2) {
+        for (const row of rows) {
+          if (!row?.r2_object_key) continue;
+          try { await r2.delete(row.r2_object_key); } catch (err) { console.error('批量删除邮件时删除 R2 对象失败:', err); }
+        }
+      }
+
+      return Response.json({ success: true, deletedCount, requested: ids.length, matched: actualIds.length });
+    } catch (e) {
+      console.error('批量删除邮件失败:', e);
+      return errorResponse('批量删除邮件失败', 500);
+    }
+  }
+
   // 清空邮箱邮件
   if (request.method === 'DELETE' && path === '/api/emails') {
     if (isMock) return errorResponse('演示模式不可清空', 403);

@@ -11,6 +11,7 @@ const showToast = window.showToast || ((msg, type) => console.log(`[${type}] ${m
 
 // 状态
 let currentUser = null, currentMailbox = null, emails = [], currentPage = 1;
+let selectedEmailIds = new Set();
 const pageSize = 20;
 let autoRefreshTimer = null, keyword = '';
 
@@ -47,6 +48,7 @@ const els = {
   passwordSubmit: document.getElementById('password-submit'),
   changePasswordBtn: document.getElementById('change-password'),
   logoutBtn: document.getElementById('logout'),
+  batchDeleteEmailsBtn: document.getElementById('batch-delete-emails'),
   autoRefresh: document.getElementById('auto-refresh'),
   refreshInterval: document.getElementById('refresh-interval'),
   searchBox: document.getElementById('search-box'),
@@ -143,7 +145,14 @@ function renderEmails() {
     
     // 绑定点击事件
     els.emailList.querySelectorAll('.email-item').forEach(item => {
-      item.onclick = () => showEmail(item.dataset.emailId);
+      item.onclick = (e) => { if (e.target.closest('.email-select-wrap') || e.target.closest('.email-select')) return; showEmail(item.dataset.emailId); };
+    });
+    els.emailList.querySelectorAll('.email-select').forEach(box => {
+      box.checked = selectedEmailIds.has(String(box.dataset.emailSelect));
+      box.addEventListener('change', (e) => {
+        const id = String(e.target.dataset.emailSelect);
+        if (e.target.checked) selectedEmailIds.add(id); else selectedEmailIds.delete(id);
+      });
     });
     
     // 分页
@@ -249,6 +258,26 @@ function showAlert(message) {
   });
 }
 
+async function batchDeleteSelectedEmails() {
+  const ids = Array.from(selectedEmailIds).map(id => Number(id)).filter(Boolean);
+  if (!ids.length) { await showAlert('请先勾选要删除的邮件'); return; }
+  const ok = await showConfirm(`确定批量删除这 ${ids.length} 封邮件吗？`);
+  if (!ok) return;
+  try {
+    const r = await api('/api/emails/batch-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+    if (!r.ok) throw new Error('批量删除失败');
+    selectedEmailIds.clear();
+    showToast('批量删除完成', 'success');
+    await loadEmails();
+  } catch (e) {
+    showToast('批量删除失败', 'error');
+  }
+}
+
 // 删除邮件
 async function deleteEmail(id) {
   if (!await showConfirm('确定删除这封邮件？')) return;
@@ -326,6 +355,8 @@ els.copyMailboxBtn?.addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(currentMailbox); showToast('已复制', 'success'); }
   catch(_) { showToast('复制失败', 'error'); }
 });
+
+els.batchDeleteEmailsBtn?.addEventListener('click', batchDeleteSelectedEmails);
 
 els.refreshEmailsBtn?.addEventListener('click', async () => {
   const icon = els.refreshEmailsBtn.querySelector('.btn-icon');

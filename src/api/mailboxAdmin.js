@@ -64,6 +64,47 @@ export async function handleMailboxAdminApi(request, db, url, path, options) {
     }
   }
 
+  // 批量删除邮箱
+  if (path === '/api/mailboxes/batch-delete' && request.method === 'POST') {
+    if (isMock) return errorResponse('演示模式不可批量删除', 403);
+    try {
+      const body = await request.json();
+      const addresses = Array.isArray(body?.addresses) ? body.addresses.map(a => String(a || '').trim().toLowerCase()).filter(Boolean) : [];
+      if (!addresses.length) return errorResponse('缺少 addresses 参数', 400);
+      if (addresses.length > 100) return errorResponse('单次最多删除100个邮箱', 400);
+
+      const placeholders = addresses.map(() => '?').join(',');
+      const mbRes = await db.prepare(`SELECT id, address FROM mailboxes WHERE address IN (${placeholders})`).bind(...addresses).all();
+      const rows = mbRes?.results || [];
+      if (!rows.length) return Response.json({ success: true, deletedCount: 0, requested: addresses.length });
+
+      const mailboxIds = rows.map(r => r.id);
+      const mailboxIdPlaceholders = mailboxIds.map(() => '?').join(',');
+      const msgRes = await db.prepare(`SELECT r2_object_key FROM messages WHERE mailbox_id IN (${mailboxIdPlaceholders}) AND r2_object_key IS NOT NULL`).bind(...mailboxIds).all();
+      const objects = msgRes?.results || [];
+
+      try { await db.exec('BEGIN'); } catch (_) {}
+      await db.prepare(`DELETE FROM messages WHERE mailbox_id IN (${mailboxIdPlaceholders})`).bind(...mailboxIds).run();
+      const delRes = await db.prepare(`DELETE FROM mailboxes WHERE id IN (${mailboxIdPlaceholders})`).bind(...mailboxIds).run();
+      try { await db.exec('COMMIT'); } catch (_) {}
+
+      if (r2 && objects.length) {
+        for (const row of objects) {
+          if (!row?.r2_object_key) continue;
+          try { await r2.delete(row.r2_object_key); } catch (err) { console.error('批量删除邮箱时删除 R2 对象失败:', err); }
+        }
+      }
+
+      for (const row of rows) invalidateMailboxCache(row.address);
+      invalidateSystemStatCache('total_mailboxes');
+
+      return Response.json({ success: true, deletedCount: delRes?.meta?.changes || 0, requested: addresses.length, matched: rows.length });
+    } catch (e) {
+      try { await db.exec('ROLLBACK'); } catch (_) {}
+      return errorResponse('批量删除失败: ' + (e?.message || e), 500);
+    }
+  }
+
   // 重置邮箱密码
   if (path === '/api/mailboxes/reset-password' && request.method === 'POST') {
     if (isMock) return Response.json({ success: true, mock: true });
