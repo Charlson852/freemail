@@ -49,6 +49,8 @@ const els = {
   changePasswordBtn: document.getElementById('change-password'),
   logoutBtn: document.getElementById('logout'),
   batchDeleteEmailsBtn: document.getElementById('batch-delete-emails'),
+  selectAllEmailsBtn: document.getElementById('select-all-emails'),
+  clearSelectedEmailsBtn: document.getElementById('clear-selected-emails'),
   autoRefresh: document.getElementById('auto-refresh'),
   refreshInterval: document.getElementById('refresh-interval'),
   searchBox: document.getElementById('search-box'),
@@ -196,6 +198,26 @@ async function showEmail(id) {
   } catch(e) {
     showToast('加载邮件失败', 'error');
   }
+}
+
+
+function getVisibleEmailIds() {
+  let filtered = filterEmails(emails, keyword);
+  const start = (currentPage - 1) * pageSize;
+  const pageItems = filtered.slice(start, start + pageSize);
+  return pageItems.map(item => String(item.id)).filter(Boolean);
+}
+
+function selectAllVisibleEmails() {
+  const ids = getVisibleEmailIds();
+  ids.forEach(id => selectedEmailIds.add(id));
+  if (ids.length) showToast(`已选中当前页 ${ids.length} 封邮件`, 'success');
+  renderEmails();
+}
+
+function clearSelectedEmails() {
+  selectedEmailIds.clear();
+  renderEmails();
 }
 
 // 自动刷新
@@ -356,6 +378,8 @@ els.copyMailboxBtn?.addEventListener('click', async () => {
   catch(_) { showToast('复制失败', 'error'); }
 });
 
+els.selectAllEmailsBtn?.addEventListener('click', selectAllVisibleEmails);
+els.clearSelectedEmailsBtn?.addEventListener('click', clearSelectedEmails);
 els.batchDeleteEmailsBtn?.addEventListener('click', batchDeleteSelectedEmails);
 
 els.refreshEmailsBtn?.addEventListener('click', async () => {
