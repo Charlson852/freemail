@@ -38,7 +38,6 @@ const els = {
   batchForward: document.getElementById('batch-forward'),
   batchClearForward: document.getElementById('batch-clear-forward'),
   batchDeleteMailboxes: document.getElementById('batch-delete-mailboxes'),
-  batchDeleteMailboxesManual: document.getElementById('batch-delete-mailboxes-manual'),
   batchSelectVisibleMailboxes: document.getElementById('batch-select-visible-mailboxes'),
   batchClearSelectedMailboxes: document.getElementById('batch-clear-selected-mailboxes'),
   // 批量操作模态框
@@ -365,7 +364,7 @@ function clearSelectedMailboxes() {
 function updateSelectedMailboxCountHint() {
   const count = selectedMailboxAddresses.size;
   if (els.batchDeleteMailboxes) {
-    els.batchDeleteMailboxes.title = count > 0 ? `删除已选邮箱（已选 ${count} 个）` : '删除已选邮箱';
+    els.batchDeleteMailboxes.title = count > 0 ? `删除已选邮箱（已选 ${count} 个）` : '请先选择要删除的邮箱';
     const label = els.batchDeleteMailboxes.querySelector('span:last-child');
     if (label) label.textContent = count > 0 ? `删除已选（${count}）` : '删除已选';
     els.batchDeleteMailboxes.disabled = count === 0;
@@ -537,9 +536,6 @@ els.batchDeleteMailboxes?.addEventListener('click', async () => {
     console.error('批量删除邮箱失败:', e);
     showToast('批量删除失败', 'error');
   }
-});
-els.batchDeleteMailboxesManual?.addEventListener('click', () => {
-  openBatchModal('delete-mailboxes', '手动输入删除邮箱', '✍️', '请输入要删除的邮箱地址（每行一个或用逗号分隔）：');
 });
 els.batchSelectVisibleMailboxes?.addEventListener('click', selectVisibleMailboxes);
 els.batchClearSelectedMailboxes?.addEventListener('click', clearSelectedMailboxes);
