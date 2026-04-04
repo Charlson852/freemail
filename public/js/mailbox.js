@@ -154,6 +154,7 @@ function renderEmails() {
       box.addEventListener('change', (e) => {
         const id = String(e.target.dataset.emailSelect);
         if (e.target.checked) selectedEmailIds.add(id); else selectedEmailIds.delete(id);
+        updateSelectedEmailCountHint();
       });
     });
     
@@ -213,11 +214,26 @@ function selectAllVisibleEmails() {
   ids.forEach(id => selectedEmailIds.add(id));
   if (ids.length) showToast(`已选中当前页 ${ids.length} 封邮件`, 'success');
   renderEmails();
+  updateSelectedEmailCountHint();
 }
 
 function clearSelectedEmails() {
   selectedEmailIds.clear();
   renderEmails();
+  updateSelectedEmailCountHint();
+  showToast('已清空已选邮件', 'success');
+}
+
+function updateSelectedEmailCountHint() {
+  const count = selectedEmailIds.size;
+  if (els.batchDeleteEmailsBtn) {
+    els.batchDeleteEmailsBtn.title = count > 0 ? `批量删除选中邮件（已选 ${count} 封）` : '批量删除选中邮件';
+    const label = els.batchDeleteEmailsBtn.querySelector('span:last-child');
+    if (label) label.textContent = count > 0 ? `批量删除（已选 ${count}）` : '批量删除';
+  }
+  if (els.clearSelectedEmailsBtn) {
+    els.clearSelectedEmailsBtn.disabled = count === 0;
+  }
 }
 
 // 自动刷新
@@ -293,6 +309,7 @@ async function batchDeleteSelectedEmails() {
     });
     if (!r.ok) throw new Error('批量删除失败');
     selectedEmailIds.clear();
+    updateSelectedEmailCountHint();
     showToast('批量删除完成', 'success');
     await loadEmails();
   } catch (e) {
@@ -381,6 +398,7 @@ els.copyMailboxBtn?.addEventListener('click', async () => {
 els.selectAllEmailsBtn?.addEventListener('click', selectAllVisibleEmails);
 els.clearSelectedEmailsBtn?.addEventListener('click', clearSelectedEmails);
 els.batchDeleteEmailsBtn?.addEventListener('click', batchDeleteSelectedEmails);
+updateSelectedEmailCountHint();
 
 els.refreshEmailsBtn?.addEventListener('click', async () => {
   const icon = els.refreshEmailsBtn.querySelector('.btn-icon');

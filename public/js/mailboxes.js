@@ -354,6 +354,7 @@ function selectVisibleMailboxes() {
 function clearSelectedMailboxes() {
   selectedMailboxAddresses.clear();
   updateSelectedMailboxCountHint();
+  showToast('已清空已选邮箱', 'success');
   if (currentData.length) {
     els.grid.innerHTML = currentView === 'grid' ? renderGrid(currentData) : renderList(currentData);
     bindCardEvents();
@@ -364,6 +365,11 @@ function updateSelectedMailboxCountHint() {
   const count = selectedMailboxAddresses.size;
   if (els.batchDeleteMailboxes) {
     els.batchDeleteMailboxes.title = count > 0 ? `批量删除邮箱（已选 ${count} 个）` : '批量删除邮箱';
+    const label = els.batchDeleteMailboxes.querySelector('span:last-child');
+    if (label) label.textContent = count > 0 ? `批量删除（已选 ${count}）` : '批量删除';
+  }
+  if (els.batchClearSelectedMailboxes) {
+    els.batchClearSelectedMailboxes.disabled = count === 0;
   }
 }
 
