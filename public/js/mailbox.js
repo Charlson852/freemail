@@ -212,7 +212,7 @@ function getVisibleEmailIds() {
 function selectAllVisibleEmails() {
   const ids = getVisibleEmailIds();
   ids.forEach(id => selectedEmailIds.add(id));
-  if (ids.length) showToast(`已选中当前页 ${ids.length} 封邮件`, 'success');
+  if (ids.length) showToast(`已选中当前页 ${ids.length} 封邮件（仅当前分页）`, 'success');
   renderEmails();
   updateSelectedEmailCountHint();
 }

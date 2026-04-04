@@ -343,7 +343,7 @@ function getVisibleMailboxAddresses() {
 
 function selectVisibleMailboxes() {
   for (const addr of getVisibleMailboxAddresses()) selectedMailboxAddresses.add(addr);
-  if (currentData.length) showToast(`已选中当前页 ${currentData.length} 个邮箱`, 'success');
+  if (currentData.length) showToast(`已选中当前页 ${currentData.length} 个邮箱（仅当前分页）`, 'success');
   updateSelectedMailboxCountHint();
   if (currentData.length) {
     els.grid.innerHTML = currentView === 'grid' ? renderGrid(currentData) : renderList(currentData);
@@ -364,7 +364,7 @@ function clearSelectedMailboxes() {
 function updateSelectedMailboxCountHint() {
   const count = selectedMailboxAddresses.size;
   if (els.batchDeleteMailboxes) {
-    els.batchDeleteMailboxes.title = count > 0 ? `删除已选邮箱（已选 ${count} 个）` : '请先选择要删除的邮箱';
+    els.batchDeleteMailboxes.title = count > 0 ? `删除已选邮箱（当前已选 ${count} 个）` : '请先选择要删除的邮箱';
     const label = els.batchDeleteMailboxes.querySelector('span:last-child');
     if (label) label.textContent = count > 0 ? `删除已选（${count}）` : '删除已选';
     els.batchDeleteMailboxes.disabled = count === 0;
