@@ -6,7 +6,7 @@ keep_vars = true
 [[d1_databases]]
 binding = "TEMP_MAIL_DB"
 database_name = "maill_free_db"
-database_id = "c82663ac-62b6-4ba6-be81-cbe297f2a3dd"
+database_id = "c7c0928f-dc64-48d4-867d-1b936f187b09"
 
 [assets]
 directory = "public"
